@@ -2452,15 +2452,30 @@ def main(argv: list[str]) -> int:
                     return 1
                 objPairs.append([objArgv[iIndex], objArgv[iIndex + 1]])
 
+    objRange: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
     objMonthsForRange: List[Tuple[int, int]] = extract_year_months_from_paths(objArgv[1:])
     if objMonthsForRange:
         objMonthsForRange.sort()
-        objRange: Tuple[Tuple[int, int], Tuple[int, int]] = (objMonthsForRange[0], objMonthsForRange[-1])
+        objRange = (objMonthsForRange[0], objMonthsForRange[-1])
         g_pszSelectedRangeText = (
             f"{objRange[0][0]:04d}年{objRange[0][1]:02d}月〜{objRange[1][0]:04d}年{objRange[1][1]:02d}月"
         )
     else:
-        objRange = ((0, 0), (0, 0))
+        pszExistingRangePath: Optional[str] = find_selected_range_path(pszBaseDirectory)
+        if pszExistingRangePath is not None:
+            objParsedRange = parse_selected_range(pszExistingRangePath)
+            if objParsedRange is not None:
+                objRange = objParsedRange
+                objStartParsed, objEndParsed = objParsedRange
+                g_pszSelectedRangeText = (
+                    f"{objStartParsed[0]:04d}年{objStartParsed[1]:02d}月〜"
+                    f"{objEndParsed[0]:04d}年{objEndParsed[1]:02d}月"
+                )
+
+    if objRange is None:
+        print("Error: ドラッグ＆ドロップされたファイル名から採用範囲を特定できませんでした。")
+        return 1
+
     g_pszSelectedRangePath = ensure_selected_range_file(pszBaseDirectory, objRange)
 
     for objPair in objPairs:
