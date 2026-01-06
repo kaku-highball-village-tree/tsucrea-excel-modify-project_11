@@ -760,6 +760,7 @@ def process_pl_tsv(
             objOutputFile.write("\t".join(objRow) + "\n")
     # step0004の処理
     # ここまで
+    move_files_to_temp([pszOutputStep0004Path], os.getcwd())
 
     iGrossProfitColumnIndex: int = -1
     iOperatingProfitColumnIndex: int = -1
@@ -1046,6 +1047,21 @@ def write_transposed_tsv(pszInputPath: str) -> None:
             objOutputFile.write("\t".join(objRow) + "\n")
 
 
+def move_files_to_temp(objFilePaths: List[str], pszBaseDirectory: str) -> None:
+    if not objFilePaths:
+        return
+
+    pszTempDirectory: str = os.path.join(pszBaseDirectory, "temp")
+    os.makedirs(pszTempDirectory, exist_ok=True)
+
+    for pszFilePath in objFilePaths:
+        if not os.path.isfile(pszFilePath):
+            continue
+        pszFileName: str = os.path.basename(pszFilePath)
+        pszTempPath: str = os.path.join(pszTempDirectory, pszFileName)
+        shutil.move(pszFilePath, pszTempPath)
+
+
 def move_files_to_temp_and_copy_back(objFilePaths: List[str], pszBaseDirectory: str) -> None:
     if not objFilePaths:
         return
@@ -1224,6 +1240,83 @@ def write_tsv_rows(pszPath: str, objRows: List[List[str]]) -> None:
     with open(pszPath, "w", encoding="utf-8", newline="") as objFile:
         for objRow in objRows:
             objFile.write("\t".join(objRow) + "\n")
+    record_created_file(pszPath)
+
+
+g_pszSelectedRangePath: Optional[str] = None
+g_pszSelectedRangeText: Optional[str] = None
+
+
+def ensure_selected_range_file(pszBaseDirectory: str, pszRangeText: str) -> str:
+    pszFileName: str = "SellGeneralAdminCost_Allocation_DnD_SelectedRange.txt"
+    pszCandidate: str = os.path.join(pszBaseDirectory, pszFileName)
+    with open(pszCandidate, "w", encoding="utf-8", newline="") as objFile:
+        objFile.write(f"採用範囲: {pszRangeText}\n")
+    return pszCandidate
+
+
+def record_created_file(pszPath: str) -> None:
+    if not pszPath:
+        return
+    if g_pszSelectedRangePath is None:
+        return
+    try:
+        with open(g_pszSelectedRangePath, "a", encoding="utf-8", newline="") as objFile:
+            objFile.write(os.path.basename(pszPath) + "\n")
+    except OSError:
+        return
+
+
+def extract_year_months_from_paths(objPaths: List[str]) -> List[Tuple[int, int]]:
+    objMatches: List[Tuple[int, int]] = []
+    objPattern = re.compile(r"(20\\d{2})年(\\d{1,2})月")
+    for pszPath in objPaths:
+        objFind = objPattern.findall(pszPath)
+        for pszYear, pszMonth in objFind:
+            try:
+                iYear = int(pszYear)
+                iMonth = int(pszMonth)
+                if 1 <= iMonth <= 12:
+                    objMatches.append((iYear, iMonth))
+            except ValueError:
+                continue
+    return objMatches
+
+
+def build_range_text_from_paths(objPaths: List[str]) -> Optional[str]:
+    objMonths = extract_year_months_from_paths(objPaths)
+    if not objMonths:
+        return None
+    objMonths.sort()
+    iStartYear, iStartMonth = objMonths[0]
+    iEndYear, iEndMonth = objMonths[-1]
+    return f"{iStartYear}年{iStartMonth}月〜{iEndYear}年{iEndMonth}月"
+
+
+def extract_year_months_from_paths(objPaths: List[str]) -> List[Tuple[int, int]]:
+    objMatches: List[Tuple[int, int]] = []
+    objPattern = re.compile(r"(20\d{2})年(\d{1,2})月")
+    for pszPath in objPaths:
+        objFind = objPattern.findall(pszPath)
+        for pszYear, pszMonth in objFind:
+            try:
+                iYear = int(pszYear)
+                iMonth = int(pszMonth)
+                if 1 <= iMonth <= 12:
+                    objMatches.append((iYear, iMonth))
+            except ValueError:
+                continue
+    return objMatches
+
+
+def build_range_text_from_paths(objPaths: List[str]) -> Optional[str]:
+    objMonths = extract_year_months_from_paths(objPaths)
+    if not objMonths:
+        return None
+    objMonths.sort()
+    iStartYear, iStartMonth = objMonths[0]
+    iEndYear, iEndMonth = objMonths[-1]
+    return f"{iStartYear}年{iStartMonth}月〜{iEndYear}年{iEndMonth}月"
 
 
 def append_gross_margin_column(objRows: List[List[str]]) -> List[List[str]]:
@@ -1259,6 +1352,60 @@ def append_gross_margin_column(objRows: List[List[str]]) -> List[List[str]]:
             objNewRow.append(format_number(fGrossProfit / fSales))
 
         objOutputRows.append(objNewRow)
+    return objOutputRows
+
+
+def collapse_company_sg_admin_cost_columns(objRows: List[List[str]]) -> List[List[str]]:
+    if not objRows:
+        return []
+
+    objTargetColumns: List[str] = [
+        "1Cカンパニー販管費",
+        "2Cカンパニー販管費",
+        "3Cカンパニー販管費",
+        "4Cカンパニー販管費",
+        "事業開発カンパニー販管費",
+    ]
+    objHeader: List[str] = objRows[0]
+    objTargetIndices: List[int] = [find_column_index(objHeader, pszColumn) for pszColumn in objTargetColumns]
+    objValidIndices: List[int] = [iIndex for iIndex in objTargetIndices if iIndex >= 0]
+    if not objValidIndices:
+        return objRows
+
+    iInsertIndex: int = min(objValidIndices)
+    objOutputRows: List[List[str]] = []
+
+    objNewHeader: List[str] = []
+    bInsertedHeader: bool = False
+    for iColumnIndex, pszValue in enumerate(objHeader):
+        if iColumnIndex in objValidIndices:
+            if not bInsertedHeader:
+                objNewHeader.append("カンパニー販管費")
+                bInsertedHeader = True
+            continue
+        objNewHeader.append(pszValue)
+    objOutputRows.append(objNewHeader)
+
+    for objRow in objRows[1:]:
+        fSum: float = 0.0
+        for iColumnIndex in objValidIndices:
+            if 0 <= iColumnIndex < len(objRow):
+                fSum += parse_number(objRow[iColumnIndex])
+
+        objNewRow: List[str] = []
+        bInserted: bool = False
+        for iColumnIndex, pszValue in enumerate(objRow):
+            if iColumnIndex in objValidIndices:
+                if not bInserted:
+                    objNewRow.append(format_number(fSum))
+                    bInserted = True
+                continue
+            objNewRow.append(pszValue)
+
+        if not bInserted:
+            objNewRow.insert(iInsertIndex, format_number(fSum))
+        objOutputRows.append(objNewRow)
+
     return objOutputRows
 
 
@@ -1730,6 +1877,11 @@ def create_pj_summary(
         "売上原価",
         "売上総利益",
         "配賦販管費",
+        "1Cカンパニー販管費",
+        "2Cカンパニー販管費",
+        "3Cカンパニー販管費",
+        "4Cカンパニー販管費",
+        "事業開発カンパニー販管費",
     ]
     objSingleStep0002Rows: List[List[str]] = filter_rows_by_columns(
         objSingleOutputRows,
@@ -1750,9 +1902,26 @@ def create_pj_summary(
     write_tsv_rows(pszSingleStep0002Path, objSingleStep0002Rows)
     write_tsv_rows(pszCumulativeStep0002Path, objCumulativeStep0002Rows)
 
-    objSingleStep0003Rows: List[List[str]] = append_gross_margin_column(objSingleStep0002Rows)
-    objCumulativeStep0003Rows: List[List[str]] = append_gross_margin_column(
+    objSingleStep0003CollapsedRows: List[List[str]] = collapse_company_sg_admin_cost_columns(
+        objSingleStep0002Rows
+    )
+    objCumulativeStep0003CollapsedRows: List[List[str]] = collapse_company_sg_admin_cost_columns(
         objCumulativeStep0002Rows
+    )
+    pszSingleStep0003CollapsedPath: str = os.path.join(
+        pszDirectory,
+        "0001_PJサマリ_step0003_単月_損益計算書.tsv",
+    )
+    pszCumulativeStep0003CollapsedPath: str = os.path.join(
+        pszDirectory,
+        "0001_PJサマリ_step0003_累計_損益計算書.tsv",
+    )
+    write_tsv_rows(pszSingleStep0003CollapsedPath, objSingleStep0003CollapsedRows)
+    write_tsv_rows(pszCumulativeStep0003CollapsedPath, objCumulativeStep0003CollapsedRows)
+
+    objSingleStep0003Rows: List[List[str]] = append_gross_margin_column(objSingleStep0003CollapsedRows)
+    objCumulativeStep0003Rows: List[List[str]] = append_gross_margin_column(
+        objCumulativeStep0003CollapsedRows
     )
     pszSingleStep0003Path: str = os.path.join(
         pszDirectory,
@@ -2150,6 +2319,17 @@ def main(argv: list[str]) -> int:
     if len(argv) < 3:
         print_usage()
         return 1
+
+    global g_pszSelectedRangePath, g_pszSelectedRangeText
+    pszBaseDirectory: str = os.getcwd()
+    pszRangeText: Optional[str] = build_range_text_from_paths(argv[1:])
+    if pszRangeText is None:
+        pszRangeText = "未設定"
+    g_pszSelectedRangeText = pszRangeText
+    pszRangePath: Optional[str] = find_selected_range_path(pszBaseDirectory)
+    if pszRangePath is None:
+        pszRangePath = ensure_selected_range_file(pszBaseDirectory, pszRangeText)
+    g_pszSelectedRangePath = pszRangePath
 
     objCsvInputs: List[str] = [pszPath for pszPath in argv[1:] if pszPath.lower().endswith(".csv")]
     objTsvInputs: List[str] = [pszPath for pszPath in argv[1:] if pszPath.lower().endswith(".tsv")]
