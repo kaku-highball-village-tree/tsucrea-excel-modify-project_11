@@ -1243,6 +1243,7 @@ def write_tsv_rows(pszPath: str, objRows: List[List[str]]) -> None:
     record_created_file(pszPath)
 
 
+<<<<<<< codex/update-file-specifications-for-sellgeneraladmincost-eb5mwb
 g_pszSelectedRangePath: Optional[str] = None
 g_pszSelectedRangeText: Optional[str] = None
 
@@ -1323,6 +1324,88 @@ def ensure_selected_range_file(
 def record_created_file(pszPath: str) -> None:
     # 仕様変更により追記は行わない
     return
+=======
+g_pszSelectedRangePath: Optional[str] = None
+g_pszSelectedRangeText: Optional[str] = None
+
+
+def ensure_selected_range_file(
+    pszBaseDirectory: str, objRange: Tuple[Tuple[int, int], Tuple[int, int]]
+) -> str:
+    (iStartYear, iStartMonth), (iEndYear, iEndMonth) = objRange
+    pszFileName: str = "SellGeneralAdminCost_Allocation_DnD_SelectedRange.txt"
+    pszCandidate: str = os.path.join(pszBaseDirectory, pszFileName)
+    pszContent: str = "\n".join(
+        [
+            f"採用範囲: {iStartYear:04d}年{iStartMonth:02d}月〜{iEndYear:04d}年{iEndMonth:02d}月",
+            "",
+            "//",
+            "// 単月_財務諸表",
+            "//",
+            "",
+            "// 8月決算の場合",
+            "",
+            f"({iStartYear:04d}年08月が前会計期間の末月)",
+            "",
+            f"損益計算書_販管費配賦_step0010_{iStartYear:04d}年08月_A∪B_プロジェクト名_C∪D.tsv",
+            "",
+            f"({iEndYear:04d}年{iEndMonth:02d}月が当会計期間内で一番最新)",
+            "",
+            f"損益計算書_販管費配賦_step0010_{iEndYear:04d}年{iEndMonth:02d}月_A∪B_プロジェクト名_C∪D.tsv",
+            "",
+            "// 3月決算の場合",
+            "",
+            f"({iEndYear:04d}年{iEndMonth:02d}月が当会計期間内で一番最新)",
+            "",
+            f"損益計算書_販管費配賦_step0010_{iEndYear:04d}年{iEndMonth:02d}月_A∪B_プロジェクト名_C∪D.tsv",
+            "",
+            "(2026年03月が当会計期間の末月)",
+            "",
+            "なし（期日未到来のため）",
+            "",
+            "//",
+            "// 累計_財務諸表",
+            "//",
+            "",
+            "// 8月決算の場合",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月.tsv",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月_vertical.tsv",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月_vertical.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
+            "",
+            "// 3月決算の場合",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
+            "",
+        ]
+    )
+    with open(pszCandidate, "w", encoding="utf-8", newline="") as objFile:
+        objFile.write(pszContent)
+    return pszCandidate
+
+
+def record_created_file(pszPath: str) -> None:
+    # 仕様変更により追記は行わない
+    return
+>>>>>>> main
 
 
 def extract_year_months_from_paths(objPaths: List[str]) -> List[Tuple[int, int]]:
@@ -1367,6 +1450,7 @@ def extract_year_months_from_paths(objPaths: List[str]) -> List[Tuple[int, int]]
     return objMatches
 
 
+<<<<<<< codex/update-file-specifications-for-sellgeneraladmincost-eb5mwb
 def build_range_text_from_paths(objPaths: List[str]) -> Optional[str]:
     objMonths = extract_year_months_from_paths(objPaths)
     if not objMonths:
@@ -1421,6 +1505,62 @@ def append_gross_margin_column(objRows: List[List[str]]) -> List[List[str]]:
         return []
     objHeader: List[str] = objRows[0]
     iSalesIndex: int = find_column_index(objHeader, "純売上高")
+=======
+def build_range_text_from_paths(objPaths: List[str]) -> Optional[str]:
+    objMonths = extract_year_months_from_paths(objPaths)
+    if not objMonths:
+        return None
+    objMonths.sort()
+    iStartYear, iStartMonth = objMonths[0]
+    iEndYear, iEndMonth = objMonths[-1]
+    return f"{iStartYear}年{iStartMonth}月〜{iEndYear}年{iEndMonth}月"
+
+
+def find_best_continuous_range(objMonths: List[Tuple[int, int]]) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
+    if not objMonths:
+        return None
+    objUniqueMonths: List[Tuple[int, int]] = sorted(set(objMonths))
+    objBestStart: Tuple[int, int] = objUniqueMonths[0]
+    objBestEnd: Tuple[int, int] = objUniqueMonths[0]
+    objCurrentStart: Tuple[int, int] = objUniqueMonths[0]
+    objCurrentEnd: Tuple[int, int] = objUniqueMonths[0]
+    iBestLength: int = 1
+    iCurrentLength: int = 1
+
+    def is_next_month(objPrev: Tuple[int, int], objNext: Tuple[int, int]) -> bool:
+        iYear, iMonth = objPrev
+        iMonth += 1
+        if iMonth > 12:
+            iMonth = 1
+            iYear += 1
+        return objNext == (iYear, iMonth)
+
+    for objMonth in objUniqueMonths[1:]:
+        if is_next_month(objCurrentEnd, objMonth):
+            objCurrentEnd = objMonth
+            iCurrentLength += 1
+        else:
+            if iCurrentLength > iBestLength or (
+                iCurrentLength == iBestLength and objCurrentEnd > objBestEnd
+            ):
+                objBestStart, objBestEnd = objCurrentStart, objCurrentEnd
+                iBestLength = iCurrentLength
+            objCurrentStart = objMonth
+            objCurrentEnd = objMonth
+            iCurrentLength = 1
+
+    if iCurrentLength > iBestLength or (iCurrentLength == iBestLength and objCurrentEnd > objBestEnd):
+        objBestStart, objBestEnd = objCurrentStart, objCurrentEnd
+
+    return objBestStart, objBestEnd
+
+
+def append_gross_margin_column(objRows: List[List[str]]) -> List[List[str]]:
+    if not objRows:
+        return []
+    objHeader: List[str] = objRows[0]
+    iSalesIndex: int = find_column_index(objHeader, "純売上高")
+>>>>>>> main
     iGrossProfitIndex: int = find_column_index(objHeader, "売上総利益")
     objOutputRows: List[List[str]] = []
 
@@ -2417,6 +2557,7 @@ def create_cumulative_reports(pszPlPath: str) -> None:
     create_pj_summary(pszPlPath, objPjSummaryRange)
 
 
+<<<<<<< codex/update-file-specifications-for-sellgeneraladmincost-eb5mwb
 def main(argv: list[str]) -> int:
     if len(argv) < 3:
         print_usage()
@@ -2433,6 +2574,24 @@ def main(argv: list[str]) -> int:
     objTsvInputs: List[str] = [pszPath for pszPath in argv[1:] if pszPath.lower().endswith(".tsv")]
 
     if objCsvInputs and objTsvInputs:
+=======
+def main(argv: list[str]) -> int:
+    if len(argv) < 3:
+        print_usage()
+        return 1
+
+    global g_pszSelectedRangePath, g_pszSelectedRangeText
+    pszBaseDirectory: str = os.getcwd()
+    pszRangeText: Optional[str] = build_range_text_from_paths(argv[1:])
+    if pszRangeText is None:
+        pszRangeText = "未設定"
+    g_pszSelectedRangeText = pszRangeText
+
+    objCsvInputs: List[str] = [pszPath for pszPath in argv[1:] if pszPath.lower().endswith(".csv")]
+    objTsvInputs: List[str] = [pszPath for pszPath in argv[1:] if pszPath.lower().endswith(".tsv")]
+
+    if objCsvInputs and objTsvInputs:
+>>>>>>> main
         print(
             "Error: CSV と TSV を混在させて実行することはできません。"
             " CSV は CSV だけでドラッグ＆ドロップしてください。"
@@ -2489,6 +2648,7 @@ def main(argv: list[str]) -> int:
         if bSplitByGroup:
             for iIndex in range(len(objManhourCandidates)):
                 objPairs.append([objManhourCandidates[iIndex], objPlCandidates[iIndex]])
+<<<<<<< codex/update-file-specifications-for-sellgeneraladmincost-eb5mwb
         else:
             for iIndex in range(1, len(objArgv), 2):
                 if iIndex + 1 >= len(objArgv):
@@ -2526,6 +2686,45 @@ def main(argv: list[str]) -> int:
     for objPair in objPairs:
         pszManhourPath: str = objPair[0]
         pszPlPath: str = objPair[1]
+=======
+        else:
+            for iIndex in range(1, len(objArgv), 2):
+                if iIndex + 1 >= len(objArgv):
+                    print_usage()
+                    return 1
+                objPairs.append([objArgv[iIndex], objArgv[iIndex + 1]])
+
+    objRange: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
+    objMonthsForRange: List[Tuple[int, int]] = extract_year_months_from_paths(objArgv[1:])
+    if objMonthsForRange:
+        objRangeCandidate = find_best_continuous_range(objMonthsForRange)
+        if objRangeCandidate is not None:
+            objRange = objRangeCandidate
+            g_pszSelectedRangeText = (
+                f"{objRange[0][0]:04d}年{objRange[0][1]:02d}月〜{objRange[1][0]:04d}年{objRange[1][1]:02d}月"
+            )
+    if objRange is None:
+        pszExistingRangePath: Optional[str] = find_selected_range_path(pszBaseDirectory)
+        if pszExistingRangePath is not None:
+            objParsedRange = parse_selected_range(pszExistingRangePath)
+            if objParsedRange is not None:
+                objRange = objParsedRange
+                objStartParsed, objEndParsed = objParsedRange
+                g_pszSelectedRangeText = (
+                    f"{objStartParsed[0]:04d}年{objStartParsed[1]:02d}月〜"
+                    f"{objEndParsed[0]:04d}年{objEndParsed[1]:02d}月"
+                )
+
+    if objRange is None:
+        print("Error: ドラッグ＆ドロップされたファイル名から採用範囲を特定できませんでした。")
+        return 1
+
+    g_pszSelectedRangePath = ensure_selected_range_file(pszBaseDirectory, objRange)
+
+    for objPair in objPairs:
+        pszManhourPath: str = objPair[0]
+        pszPlPath: str = objPair[1]
+>>>>>>> main
         pszOutputPath: str
         if len(objPair) == 3:
             pszOutputPath = objPair[2]
