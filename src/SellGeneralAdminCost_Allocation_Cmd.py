@@ -1247,24 +1247,82 @@ g_pszSelectedRangePath: Optional[str] = None
 g_pszSelectedRangeText: Optional[str] = None
 
 
-def ensure_selected_range_file(pszBaseDirectory: str, pszRangeText: str) -> str:
+def ensure_selected_range_file(
+    pszBaseDirectory: str, objRange: Tuple[Tuple[int, int], Tuple[int, int]]
+) -> str:
+    (iStartYear, iStartMonth), (iEndYear, iEndMonth) = objRange
     pszFileName: str = "SellGeneralAdminCost_Allocation_DnD_SelectedRange.txt"
     pszCandidate: str = os.path.join(pszBaseDirectory, pszFileName)
+    pszContent: str = "\n".join(
+        [
+            f"採用範囲: {iStartYear:04d}年{iStartMonth:02d}月〜{iEndYear:04d}年{iEndMonth:02d}月",
+            "",
+            "//",
+            "// 単月_財務諸表",
+            "//",
+            "",
+            "// 8月決算の場合",
+            "",
+            f"({iStartYear:04d}年08月が前会計期間の末月)",
+            "",
+            f"損益計算書_販管費配賦_step0010_{iStartYear:04d}年08月_A∪B_プロジェクト名_C∪D.tsv",
+            "",
+            f"({iEndYear:04d}年{iEndMonth:02d}月が当会計期間内で一番最新)",
+            "",
+            f"損益計算書_販管費配賦_step0010_{iEndYear:04d}年{iEndMonth:02d}月_A∪B_プロジェクト名_C∪D.tsv",
+            "",
+            "// 3月決算の場合",
+            "",
+            f"({iEndYear:04d}年{iEndMonth:02d}月が当会計期間内で一番最新)",
+            "",
+            f"損益計算書_販管費配賦_step0010_{iEndYear:04d}年{iEndMonth:02d}月_A∪B_プロジェクト名_C∪D.tsv",
+            "",
+            "(2026年03月が当会計期間の末月)",
+            "",
+            "なし（期日未到来のため）",
+            "",
+            "//",
+            "// 累計_財務諸表",
+            "//",
+            "",
+            "// 8月決算の場合",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月.tsv",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月_vertical.tsv",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月_vertical.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
+            "",
+            "// 3月決算の場合",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
+            "",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
+            "",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
+            "",
+        ]
+    )
     with open(pszCandidate, "w", encoding="utf-8", newline="") as objFile:
-        objFile.write(f"採用範囲: {pszRangeText}\n")
+        objFile.write(pszContent)
     return pszCandidate
 
 
 def record_created_file(pszPath: str) -> None:
-    if not pszPath:
-        return
-    if g_pszSelectedRangePath is None:
-        return
-    try:
-        with open(g_pszSelectedRangePath, "a", encoding="utf-8", newline="") as objFile:
-            objFile.write(os.path.basename(pszPath) + "\n")
-    except OSError:
-        return
+    # 仕様変更により追記は行わない
+    return
 
 
 def extract_year_months_from_paths(objPaths: List[str]) -> List[Tuple[int, int]]:
@@ -2326,10 +2384,6 @@ def main(argv: list[str]) -> int:
     if pszRangeText is None:
         pszRangeText = "未設定"
     g_pszSelectedRangeText = pszRangeText
-    pszRangePath: Optional[str] = find_selected_range_path(pszBaseDirectory)
-    if pszRangePath is None:
-        pszRangePath = ensure_selected_range_file(pszBaseDirectory, pszRangeText)
-    g_pszSelectedRangePath = pszRangePath
 
     objCsvInputs: List[str] = [pszPath for pszPath in argv[1:] if pszPath.lower().endswith(".csv")]
     objTsvInputs: List[str] = [pszPath for pszPath in argv[1:] if pszPath.lower().endswith(".tsv")]
@@ -2397,6 +2451,17 @@ def main(argv: list[str]) -> int:
                     print_usage()
                     return 1
                 objPairs.append([objArgv[iIndex], objArgv[iIndex + 1]])
+
+    objMonthsForRange: List[Tuple[int, int]] = extract_year_months_from_paths(objArgv[1:])
+    if objMonthsForRange:
+        objMonthsForRange.sort()
+        objRange: Tuple[Tuple[int, int], Tuple[int, int]] = (objMonthsForRange[0], objMonthsForRange[-1])
+        g_pszSelectedRangeText = (
+            f"{objRange[0][0]:04d}年{objRange[0][1]:02d}月〜{objRange[1][0]:04d}年{objRange[1][1]:02d}月"
+        )
+    else:
+        objRange = ((0, 0), (0, 0))
+    g_pszSelectedRangePath = ensure_selected_range_file(pszBaseDirectory, objRange)
 
     for objPair in objPairs:
         pszManhourPath: str = objPair[0]
