@@ -1377,6 +1377,45 @@ def build_range_text_from_paths(objPaths: List[str]) -> Optional[str]:
     return f"{iStartYear}年{iStartMonth}月〜{iEndYear}年{iEndMonth}月"
 
 
+def find_best_continuous_range(objMonths: List[Tuple[int, int]]) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
+    if not objMonths:
+        return None
+    objUniqueMonths: List[Tuple[int, int]] = sorted(set(objMonths))
+    objBestStart: Tuple[int, int] = objUniqueMonths[0]
+    objBestEnd: Tuple[int, int] = objUniqueMonths[0]
+    objCurrentStart: Tuple[int, int] = objUniqueMonths[0]
+    objCurrentEnd: Tuple[int, int] = objUniqueMonths[0]
+    iBestLength: int = 1
+    iCurrentLength: int = 1
+
+    def is_next_month(objPrev: Tuple[int, int], objNext: Tuple[int, int]) -> bool:
+        iYear, iMonth = objPrev
+        iMonth += 1
+        if iMonth > 12:
+            iMonth = 1
+            iYear += 1
+        return objNext == (iYear, iMonth)
+
+    for objMonth in objUniqueMonths[1:]:
+        if is_next_month(objCurrentEnd, objMonth):
+            objCurrentEnd = objMonth
+            iCurrentLength += 1
+        else:
+            if iCurrentLength > iBestLength or (
+                iCurrentLength == iBestLength and objCurrentEnd > objBestEnd
+            ):
+                objBestStart, objBestEnd = objCurrentStart, objCurrentEnd
+                iBestLength = iCurrentLength
+            objCurrentStart = objMonth
+            objCurrentEnd = objMonth
+            iCurrentLength = 1
+
+    if iCurrentLength > iBestLength or (iCurrentLength == iBestLength and objCurrentEnd > objBestEnd):
+        objBestStart, objBestEnd = objCurrentStart, objCurrentEnd
+
+    return objBestStart, objBestEnd
+
+
 def append_gross_margin_column(objRows: List[List[str]]) -> List[List[str]]:
     if not objRows:
         return []
@@ -2455,12 +2494,13 @@ def main(argv: list[str]) -> int:
     objRange: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
     objMonthsForRange: List[Tuple[int, int]] = extract_year_months_from_paths(objArgv[1:])
     if objMonthsForRange:
-        objMonthsForRange.sort()
-        objRange = (objMonthsForRange[0], objMonthsForRange[-1])
-        g_pszSelectedRangeText = (
-            f"{objRange[0][0]:04d}年{objRange[0][1]:02d}月〜{objRange[1][0]:04d}年{objRange[1][1]:02d}月"
-        )
-    else:
+        objRangeCandidate = find_best_continuous_range(objMonthsForRange)
+        if objRangeCandidate is not None:
+            objRange = objRangeCandidate
+            g_pszSelectedRangeText = (
+                f"{objRange[0][0]:04d}年{objRange[0][1]:02d}月〜{objRange[1][0]:04d}年{objRange[1][1]:02d}月"
+            )
+    if objRange is None:
         pszExistingRangePath: Optional[str] = find_selected_range_path(pszBaseDirectory)
         if pszExistingRangePath is not None:
             objParsedRange = parse_selected_range(pszExistingRangePath)
