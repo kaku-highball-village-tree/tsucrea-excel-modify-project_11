@@ -1247,12 +1247,15 @@ g_pszSelectedRangePath: Optional[str] = None
 g_pszSelectedRangeText: Optional[str] = None
 
 
-def ensure_selected_range_file(pszBaseDirectory: str) -> str:
+def ensure_selected_range_file(
+    pszBaseDirectory: str, objRange: Tuple[Tuple[int, int], Tuple[int, int]]
+) -> str:
+    (iStartYear, iStartMonth), (iEndYear, iEndMonth) = objRange
     pszFileName: str = "SellGeneralAdminCost_Allocation_DnD_SelectedRange.txt"
     pszCandidate: str = os.path.join(pszBaseDirectory, pszFileName)
     pszContent: str = "\n".join(
         [
-            "採用範囲: 2025年04月〜2025年10月",
+            f"採用範囲: {iStartYear:04d}年{iStartMonth:02d}月〜{iEndYear:04d}年{iEndMonth:02d}月",
             "",
             "//",
             "// 単月_財務諸表",
@@ -1260,19 +1263,19 @@ def ensure_selected_range_file(pszBaseDirectory: str) -> str:
             "",
             "// 8月決算の場合",
             "",
-            "(2025年08月が前会計期間の末月)",
+            f"({iStartYear:04d}年08月が前会計期間の末月)",
             "",
-            "損益計算書_販管費配賦_step0010_2025年08月_A∪B_プロジェクト名_C∪D.tsv",
+            f"損益計算書_販管費配賦_step0010_{iStartYear:04d}年08月_A∪B_プロジェクト名_C∪D.tsv",
             "",
-            "(2025年10月が当会計期間内で一番最新)",
+            f"({iEndYear:04d}年{iEndMonth:02d}月が当会計期間内で一番最新)",
             "",
-            "損益計算書_販管費配賦_step0010_2025年10月_A∪B_プロジェクト名_C∪D.tsv",
+            f"損益計算書_販管費配賦_step0010_{iEndYear:04d}年{iEndMonth:02d}月_A∪B_プロジェクト名_C∪D.tsv",
             "",
             "// 3月決算の場合",
             "",
-            "(2025年10月が当会計期間内で一番最新)",
+            f"({iEndYear:04d}年{iEndMonth:02d}月が当会計期間内で一番最新)",
             "",
-            "損益計算書_販管費配賦_step0010_2025年10月_A∪B_プロジェクト名_C∪D.tsv",
+            f"損益計算書_販管費配賦_step0010_{iEndYear:04d}年{iEndMonth:02d}月_A∪B_プロジェクト名_C∪D.tsv",
             "",
             "(2026年03月が当会計期間の末月)",
             "",
@@ -1284,31 +1287,31 @@ def ensure_selected_range_file(pszBaseDirectory: str) -> str:
             "",
             "// 8月決算の場合",
             "",
-            "累計_製造原価報告書_2025年04月_2025年08月.tsv",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月.tsv",
             "",
-            "累計_製造原価報告書_2025年04月_2025年08月_vertical.tsv",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月_vertical.tsv",
             "",
-            "累計_製造原価報告書_2025年09月_2025年10月.tsv",
+            f"累計_製造原価報告書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
             "",
-            "累計_製造原価報告書_2025年09月_2025年10月_vertical.tsv",
+            f"累計_製造原価報告書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
             "",
-            "累計_損益計算書_2025年04月_2025年08月.tsv",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月.tsv",
             "",
-            "累計_損益計算書_2025年04月_2025年08月_vertical.tsv",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iStartYear:04d}年08月_vertical.tsv",
             "",
-            "累計_損益計算書_2025年09月_2025年10月.tsv",
+            f"累計_損益計算書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
             "",
-            "累計_損益計算書_2025年09月_2025年10月_vertical.tsv",
+            f"累計_損益計算書_{iStartYear:04d}年09月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
             "",
             "// 3月決算の場合",
             "",
-            "累計_製造原価報告書_2025年04月_2025年10月.tsv",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
             "",
-            "累計_製造原価報告書_2025年04月_2025年10月_vertical.tsv",
+            f"累計_製造原価報告書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
             "",
-            "累計_損益計算書_2025年04月_2025年10月.tsv",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月.tsv",
             "",
-            "累計_損益計算書_2025年04月_2025年10月_vertical.tsv",
+            f"累計_損益計算書_{iStartYear:04d}年{iStartMonth:02d}月_{iEndYear:04d}年{iEndMonth:02d}月_vertical.tsv",
             "",
         ]
     )
@@ -2449,16 +2452,16 @@ def main(argv: list[str]) -> int:
                     return 1
                 objPairs.append([objArgv[iIndex], objArgv[iIndex + 1]])
 
-    pszExistingRangePath: Optional[str] = find_selected_range_path(pszBaseDirectory)
-    objManhourInputs: List[str] = [objPair[0] for objPair in objPairs]
-    objPlInputs: List[str] = [objPair[1] for objPair in objPairs]
-    bCreateSelectedRange: bool = len(objManhourInputs) >= 2 and len(objPlInputs) >= 2
-    if pszExistingRangePath is not None:
-        g_pszSelectedRangePath = pszExistingRangePath
-    elif bCreateSelectedRange:
-        g_pszSelectedRangePath = ensure_selected_range_file(pszBaseDirectory)
+    objMonthsForRange: List[Tuple[int, int]] = extract_year_months_from_paths(objArgv[1:])
+    if objMonthsForRange:
+        objMonthsForRange.sort()
+        objRange: Tuple[Tuple[int, int], Tuple[int, int]] = (objMonthsForRange[0], objMonthsForRange[-1])
+        g_pszSelectedRangeText = (
+            f"{objRange[0][0]:04d}年{objRange[0][1]:02d}月〜{objRange[1][0]:04d}年{objRange[1][1]:02d}月"
+        )
     else:
-        g_pszSelectedRangePath = None
+        objRange = ((0, 0), (0, 0))
+    g_pszSelectedRangePath = ensure_selected_range_file(pszBaseDirectory, objRange)
 
     for objPair in objPairs:
         pszManhourPath: str = objPair[0]
