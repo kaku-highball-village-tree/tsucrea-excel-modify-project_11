@@ -1247,24 +1247,79 @@ g_pszSelectedRangePath: Optional[str] = None
 g_pszSelectedRangeText: Optional[str] = None
 
 
-def ensure_selected_range_file(pszBaseDirectory: str, pszRangeText: str) -> str:
+def ensure_selected_range_file(pszBaseDirectory: str) -> str:
     pszFileName: str = "SellGeneralAdminCost_Allocation_DnD_SelectedRange.txt"
     pszCandidate: str = os.path.join(pszBaseDirectory, pszFileName)
+    pszContent: str = "\n".join(
+        [
+            "採用範囲: 2025年04月〜2025年10月",
+            "",
+            "//",
+            "// 単月_財務諸表",
+            "//",
+            "",
+            "// 8月決算の場合",
+            "",
+            "(2025年08月が前会計期間の末月)",
+            "",
+            "損益計算書_販管費配賦_step0010_2025年08月_A∪B_プロジェクト名_C∪D.tsv",
+            "",
+            "(2025年10月が当会計期間内で一番最新)",
+            "",
+            "損益計算書_販管費配賦_step0010_2025年10月_A∪B_プロジェクト名_C∪D.tsv",
+            "",
+            "// 3月決算の場合",
+            "",
+            "(2025年10月が当会計期間内で一番最新)",
+            "",
+            "損益計算書_販管費配賦_step0010_2025年10月_A∪B_プロジェクト名_C∪D.tsv",
+            "",
+            "(2026年03月が当会計期間の末月)",
+            "",
+            "なし（期日未到来のため）",
+            "",
+            "//",
+            "// 累計_財務諸表",
+            "//",
+            "",
+            "// 8月決算の場合",
+            "",
+            "累計_製造原価報告書_2025年04月_2025年08月.tsv",
+            "",
+            "累計_製造原価報告書_2025年04月_2025年08月_vertical.tsv",
+            "",
+            "累計_製造原価報告書_2025年09月_2025年10月.tsv",
+            "",
+            "累計_製造原価報告書_2025年09月_2025年10月_vertical.tsv",
+            "",
+            "累計_損益計算書_2025年04月_2025年08月.tsv",
+            "",
+            "累計_損益計算書_2025年04月_2025年08月_vertical.tsv",
+            "",
+            "累計_損益計算書_2025年09月_2025年10月.tsv",
+            "",
+            "累計_損益計算書_2025年09月_2025年10月_vertical.tsv",
+            "",
+            "// 3月決算の場合",
+            "",
+            "累計_製造原価報告書_2025年04月_2025年10月.tsv",
+            "",
+            "累計_製造原価報告書_2025年04月_2025年10月_vertical.tsv",
+            "",
+            "累計_損益計算書_2025年04月_2025年10月.tsv",
+            "",
+            "累計_損益計算書_2025年04月_2025年10月_vertical.tsv",
+            "",
+        ]
+    )
     with open(pszCandidate, "w", encoding="utf-8", newline="") as objFile:
-        objFile.write(f"採用範囲: {pszRangeText}\n")
+        objFile.write(pszContent)
     return pszCandidate
 
 
 def record_created_file(pszPath: str) -> None:
-    if not pszPath:
-        return
-    if g_pszSelectedRangePath is None:
-        return
-    try:
-        with open(g_pszSelectedRangePath, "a", encoding="utf-8", newline="") as objFile:
-            objFile.write(os.path.basename(pszPath) + "\n")
-    except OSError:
-        return
+    # 仕様変更により追記は行わない
+    return
 
 
 def extract_year_months_from_paths(objPaths: List[str]) -> List[Tuple[int, int]]:
@@ -2326,10 +2381,6 @@ def main(argv: list[str]) -> int:
     if pszRangeText is None:
         pszRangeText = "未設定"
     g_pszSelectedRangeText = pszRangeText
-    pszRangePath: Optional[str] = find_selected_range_path(pszBaseDirectory)
-    if pszRangePath is None:
-        pszRangePath = ensure_selected_range_file(pszBaseDirectory, pszRangeText)
-    g_pszSelectedRangePath = pszRangePath
 
     objCsvInputs: List[str] = [pszPath for pszPath in argv[1:] if pszPath.lower().endswith(".csv")]
     objTsvInputs: List[str] = [pszPath for pszPath in argv[1:] if pszPath.lower().endswith(".tsv")]
@@ -2397,6 +2448,17 @@ def main(argv: list[str]) -> int:
                     print_usage()
                     return 1
                 objPairs.append([objArgv[iIndex], objArgv[iIndex + 1]])
+
+    pszExistingRangePath: Optional[str] = find_selected_range_path(pszBaseDirectory)
+    objManhourInputs: List[str] = [objPair[0] for objPair in objPairs]
+    objPlInputs: List[str] = [objPair[1] for objPair in objPairs]
+    bCreateSelectedRange: bool = len(objManhourInputs) >= 2 and len(objPlInputs) >= 2
+    if pszExistingRangePath is not None:
+        g_pszSelectedRangePath = pszExistingRangePath
+    elif bCreateSelectedRange:
+        g_pszSelectedRangePath = ensure_selected_range_file(pszBaseDirectory)
+    else:
+        g_pszSelectedRangePath = None
 
     for objPair in objPairs:
         pszManhourPath: str = objPair[0]
